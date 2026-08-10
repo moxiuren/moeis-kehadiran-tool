@@ -1,0 +1,15 @@
+# Gradle & Android Build Artifacts
+.gradle/
+build/
+*/build/
+*.apk
+*.aab
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary & Handoff files
+HANDOFF_*
+*.log
+/tmp/

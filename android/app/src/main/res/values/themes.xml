@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.Moeis" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#1565c0</item>
+        <item name="android:windowBackground">#f0f2f5</item>
+    </style>
+</resources>

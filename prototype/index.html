@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>点名 · MOEIS Kehadiran</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, "PingFang SC", "Segoe UI", Arial, sans-serif; background: #f0f2f5; color: #1c2333; padding-bottom: 96px; }
+  .header { position: sticky; top: 0; z-index: 10; background: linear-gradient(135deg, #1565c0, #1e88e5); color: #fff; padding: 14px 16px 12px; box-shadow: 0 2px 10px rgba(21,101,192,.3); }
+  .header .school { font-size: 12px; opacity: .85; }
+  .header .title { font-size: 18px; font-weight: 700; margin-top: 2px; }
+  .header .sub { font-size: 12px; opacity: .9; margin-top: 2px; }
+  .date-bar { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+  .date-bar input { flex: 1; border: none; border-radius: 8px; padding: 8px 10px; font-size: 14px; color: #1c2333; }
+  .stats { display: flex; gap: 8px; margin: 10px 16px 0; }
+  .stat-card { flex: 1; background: #fff; border-radius: 10px; padding: 10px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .stat-card .num { font-size: 22px; font-weight: 800; }
+  .stat-card .label { font-size: 11px; color: #777; margin-top: 2px; }
+  .stat-card.green .num { color: #2e7d32; }
+  .stat-card.red .num { color: #e53935; }
+  .stat-card.blue .num { color: #1565c0; }
+  .toolbar { display: flex; gap: 8px; margin: 12px 16px; }
+  .toolbar button { flex: 1; border: none; border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 700; color: #fff; cursor: pointer; }
+  .btn-all { background: #2e7d32; }
+  .btn-fill { background: #607d8b; }
+  .list { margin: 0 16px; }
+  .student { display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: #e3f2fd; color: #1565c0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; flex-shrink: 0; }
+  .student.absent .avatar { background: #ffebee; color: #e53935; }
+  .s-name { flex: 1; font-size: 14px; font-weight: 600; }
+  .s-badge { font-size: 11px; color: #888; }
+  .toggle { width: 52px; height: 30px; border-radius: 15px; background: #bdbdbd; position: relative; transition: background .2s; flex-shrink: 0; }
+  .toggle.on { background: #2e7d32; }
+  .toggle .knob { position: absolute; top: 2px; left: 2px; width: 26px; height: 26px; border-radius: 50%; background: #fff; transition: left .2s; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+  .toggle.on .knob { left: 24px; }
+  .reason { width: 100%; margin-top: 8px; display: none; }
+  .student.absent .reason { display: block; }
+  .reason select { width: 100%; border: 1px solid #e0e0e0; border-radius: 8px; padding: 8px; font-size: 13px; background: #fff; margin-bottom: 6px; }
+  .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 -2px 10px rgba(0,0,0,.08); display: flex; gap: 8px; }
+  .bottom-bar button { flex: 1; border: none; border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 700; }
+  .btn-submit { background: linear-gradient(135deg, #1565c0, #1e88e5); color: #fff; }
+  .btn-reset { background: #eee; color: #555; }
+  .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: rgba(0,0,0,.82); color: #fff; padding: 14px 22px; border-radius: 12px; font-size: 14px; z-index: 99; opacity: 0; transition: opacity .25s; pointer-events: none; max-width: 80%; text-align: center; }
+  .toast.show { opacity: 1; }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 50; display: none; align-items: center; justify-content: center; }
+  .modal.show { display: flex; }
+  .modal-box { background: #fff; border-radius: 14px; width: 88%; max-width: 380px; max-height: 75vh; overflow-y: auto; padding: 18px; }
+  .modal-box h3 { font-size: 16px; margin-bottom: 10px; }
+  .modal-box table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .modal-box td { padding: 6px 4px; border-bottom: 1px solid #f0f0f0; }
+  .modal-box .tag { display: inline-block; background: #ffebee; color: #e53935; border-radius: 4px; font-size: 11px; padding: 1px 5px; }
+  .modal-btns { display: flex; gap: 8px; margin-top: 14px; }
+  .modal-btns button { flex: 1; border: none; border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .confirm-ok { background: #1565c0; color: #fff; }
+  .confirm-no { background: #eee; color: #555; }
+  .confirmed-badge { display: inline-block; background: #2e7d32; color: #fff; font-size: 12px; font-weight: 700; border-radius: 20px; padding: 3px 10px; margin-left: 8px; }
+  .demo-note { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); background: #fff3cd; color: #856404; font-size: 11px; border-radius: 20px; padding: 4px 12px; z-index: 20; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+</style>
+</head>
+<body>
+
+<div class="demo-note">演示版 · 使用你班真实名单模拟 · 提交不会写入系统</div>
+
+<div class="header">
+  <div class="school">SEKOLAH JENIS KEBANGSAAN (CINA) PEI HWA · JBC1021</div>
+  <div class="title">点名 · 今日出勤</div>
+  <div class="sub" id="className">GAN KAI PIN · GURU KELAS <span id="confirmBadge"></span></div>
+  <div class="date-bar">
+    <input type="date" id="dateInput">
+    <button id="btnToday" style="background:#fff;color:#1565c0;border:1px solid rgba(255,255,255,.5);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700">今天</button>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat-card green"><div class="num" id="nPresent">0</div><div class="label">已到</div></div>
+  <div class="stat-card red"><div class="num" id="nAbsent">0</div><div class="label">缺勤</div></div>
+  <div class="stat-card blue"><div class="num" id="nTotal">0</div><div class="label">全班</div></div>
+</div>
+
+<div class="toolbar">
+  <button class="btn-all" id="btnAllPresent">✔ 全员出席</button>
+  <button class="btn-fill" id="btnFillDupes">🔁 复制昨日缺席</button>
+</div>
+
+<div class="list" id="studentList"></div>
+
+<div class="bottom-bar">
+  <button class="btn-reset" id="btnReset">重置</button>
+  <button class="btn-submit" id="btnSubmit">✓ 保存并确认全部点名</button>
+</div>
+
+<div class="modal" id="confirmModal">
+  <div class="modal-box">
+    <h3>确认提交 10/08/2026 点名</h3>
+    <div id="confirmTable"></div>
+    <div class="modal-btns">
+      <button class="confirm-no" id="btnCancelModal">再检查</button>
+      <button class="confirm-ok" id="btnOkModal">确认提交</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var SCHOOL = 'PEI HWA';
+var KLAS = 'JBC1021';
+var CURRENT_DATE = '2026-08-10';
+
+var STUDENTS = [
+  'BOO QIAO HOOI','BOO QIAO YEE','CHEN WENNING QUINTA','CHEONG NG TIAN WU','CHU CHIN HONG',
+  'GRACE SIA YU QING','HO YU XUAN','ILENA TAN YU XUAN','JADEN NG YEW QUAN','JOVAN LEE KAI ZE',
+  'KHOON WEI KANG','LEE XIAO FENG','LEE ZI QING','LIM YAN SIN','LIM ZHI KIAT',
+  'LYNNETH ONG XIN LING','MIINA LIU YIN XI','MUHAMMAD AQIL HAFIZAN BIN ABDUL AZIZ','MUHAMMAD RAIMI ARDANI BIN MUHAMMAD FATAH','NOAH LEE REN YI',
+  'OLIVIA CHUA YANXI','SAMUEL TAN WEI SHAN','SIA LIM NUO','SITI NAURA ALEESYA BINTI MOHD NOH','TAN ZE RUI',
+  'TEN YU QI','WAN AISY ASYRAF BIN WAN AWANG','WONG KAI RHUI','YAP KHAI JUNE','YEO FENG YU'
+];
+
+var CATEGORIES = [
+  ['D','MASALAH KESIHATAN'],['A','PDPR'],['N','PONTENG'],['M','KEBENARAN PENGETUA/GURU BESAR'],
+  ['B','AKTIVITI LUAR SEKOLAH'],['K','ANCAMAN KESELAMATAN'],['L','BENCANA ALAM'],
+  ['E','DIGANTUNG SEKOLAH'],['J','MASALAH KELUARGA'],['I','MASALAH PERIBADI'],
+  ['G','PENGGILIRAN PEPERIKSAAN'],['P','SEKOLAH DALAM HOSPITAL']
+];
+
+var CAUSES = {
+  'D': [['D0260001','MAKLUMAN IBU BAPA PENJAGA'],['D0010075','DEMAM'],['D0020059','TEMUJANJI HOSPITAL/KLINIK'],['D0060063','IMUNISASI RENDAH'],['D0090009','DENGGI'],['D0010001','COVID 19 BERGEJALA'],['D0030003','COVID 19 DIKUARANTIN'],['D0130013','INFLUENZA'],['D0120012','HFMD'],['D0020002','COVID 19 DENGAN KEBENARAN IBUBAPA']],
+  'A': [['A0010001','PDPR']],
+  'N': [['N0050001','PONTENG']],
+  'M': [['M0010001','KEBENARAN PENGETUA/GURU BESAR']]
+};
+
+var state = {};
+var absentCache = {}; // date -> [name]
+
+var $ = function (id) { return document.getElementById(id); };
+var todayStr = function () {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+};
+
+function initials(name) {
+  var parts = name.split(' ');
+  var result = '';
+  for (var i = 0; i < parts.length && i < 3; i++) result += parts[i][0];
+  return result;
+}
+
+function render() {
+  var list = $('studentList');
+  list.innerHTML = '';
+  var nPres = 0, nAbs = 0;
+  STUDENTS.forEach(function (name, idx) {
+    var s = state[name];
+    if (!s) { state[name] = { present: true, kategori: '', sebab: '', sebabText: '' }; s = state[name]; }
+    if (!s.present && !s.sebab) { s.kategori = 'D'; s.sebab = 'D0010075'; s.sebabText = 'DEMAM'; }
+    s.present ? nPres++ : nAbs++;
+
+    var div = document.createElement('div');
+    div.className = 'student' + (s.present ? '' : ' absent');
+    div.innerHTML =
+      '<div class="avatar">' + initials(name) + '</div>' +
+      '<div style="flex:1"><div class="s-name">' + name + '</div><div class="s-badge">' + (s.present ? '出席' : s.sebabText) + '</div></div>' +
+      '<div class="toggle' + (s.present ? ' on' : '') + '" data-i="' + idx + '"><div class="knob"></div></div>' +
+      '<div class="reason">' +
+        '<select class="sel-kat" data-i="' + idx + '">' + CATEGORIES.map(function (c) { return '<option value="' + c[0] + '"' + (s.kategori === c[0] ? ' selected' : '') + '>' + c[0] + ' · ' + c[1] + '</option>'; }).join('') + '</select>' +
+        '<select class="sel-sebab" data-i="' + idx + '">' + (CAUSES[s.kategori] || []).map(function (c) { return '<option value="' + c[0] + '"' + (s.sebab === c[0] ? ' selected' : '') + '>' + c[1] + '</option>'; }).join('') + '</select>' +
+      '</div>';
+    list.appendChild(div);
+  });
+  $('nPresent').textContent = nPres;
+  $('nAbsent').textContent = nAbs;
+  $('nTotal').textContent = STUDENTS.length;
+}
+
+function toggleStudent(idx) {
+  var name = STUDENTS[idx];
+  state[name].present = !state[name].present;
+  if (state[name].present) { state[name].kategori = ''; state[name].sebab = ''; state[name].sebabText = ''; }
+  else { state[name].kategori = 'D'; state[name].sebab = 'D0010075'; state[name].sebabText = 'DEMAM'; }
+  render();
+}
+
+function toast(text, ms) {
+  var t = $('toast');
+  t.textContent = text;
+  t.classList.add('show');
+  setTimeout(function () { t.classList.remove('show'); }, ms || 1600);
+}
+
+$('studentList').addEventListener('click', function (e) {
+  var t = e.target.closest('.toggle');
+  if (t) toggleStudent(parseInt(t.dataset.i));
+});
+$('studentList').addEventListener('change', function (e) {
+  var sel = e.target;
+  if (sel.classList.contains('sel-kat')) {
+    var idx = parseInt(sel.dataset.i);
+    var name = STUDENTS[idx];
+    state[name].kategori = sel.value;
+    state[name].sebab = CAUSES[sel.value][0][0];
+    state[name].sebabText = CAUSES[sel.value][0][1];
+    render();
+  } else if (sel.classList.contains('sel-sebab')) {
+    var idx2 = parseInt(sel.dataset.i);
+    var name2 = STUDENTS[idx2];
+    state[name2].sebab = sel.value;
+    state[name2].sebabText = sel.selectedOptions[0].textContent;
+    sel.closest('.student').querySelector('.s-badge').textContent = sel.selectedOptions[0].textContent;
+  }
+});
+
+$('btnAllPresent').addEventListener('click', function () {
+  STUDENTS.forEach(function (n) { state[n] = { present: true, kategori: '', sebab: '', sebabText: '' }; });
+  render();
+  toast('已设全班出席');
+});
+
+$('btnFillDupes').addEventListener('click', function () {
+  var y = absentCache[prevDate()];
+  if (!y || !y.length) { toast('暂无昨日缺席记录'); return; }
+  STUDENTS.forEach(function (n) {
+    if (y.indexOf(n) !== -1) { state[n].present = false; state[n].kategori = 'N'; state[n].sebab = 'N0050001'; state[n].sebabText = 'PONTENG'; }
+  });
+  render();
+  toast('已复制 ' + y.length + ' 名昨日缺席');
+});
+
+$('btnReset').addEventListener('click', function () { render(); });
+$('btnToday').addEventListener('click', function () {
+  $('dateInput').value = todayStr();
+});
+$('dateInput').value = CURRENT_DATE;
+
+$('btnSubmit').addEventListener('click', function () {
+  var absent = STUDENTS.filter(function (n) { return !state[n].present; });
+  var missing = absent.filter(function (n) { return !state[n].sebab; });
+  if (missing.length) { toast('缺勤学生未选原因: ' + missing.join('、')); return; }
+  var rows = absent.map(function (n, i) {
+    return '<tr><td>' + (i + 1) + '</td><td>' + n + '</td><td><span class="tag">' + state[n].sebabText + '</span></td></tr>';
+  }).join('');
+  $('confirmTable').innerHTML = absent.length
+    ? '<table><tr><th>#</th><th>Nama Murid</th><th>Sebab</th></tr>' + rows + '</table>'
+    : '<div style="text-align:center;color:#2e7d32;padding:12px;font-size:13px">全班出席，无缺勤记录</div>';
+  $('confirmModal').classList.add('show');
+});
+
+$('btnCancelModal').addEventListener('click', function () { $('confirmModal').classList.remove('show'); });
+$('btnOkModal').addEventListener('click', function () {
+  $('confirmModal').classList.remove('show');
+  var d = $('dateInput').value || CURRENT_DATE;
+  absentCache[d] = STUDENTS.filter(function (n) { return !state[n].present; });
+  $('confirmBadge').innerHTML = '<span class="confirmed-badge">✓ 10/' + d.slice(5) + ' 已确认</span>';
+  toast('已保存并确认 ' + d);
+});
+
+function prevDate() {
+  var d = new Date($('dateInput').value + 'T00:00:00');
+  d.setDate(d.getDate() - 1);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+render();
+</script>
+</body>
+</html>
