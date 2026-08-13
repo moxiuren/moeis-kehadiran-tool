@@ -13,3 +13,6 @@ Thumbs.db
 HANDOFF_*
 *.log
 /tmp/
+scratch/
+server.py
+err.txt

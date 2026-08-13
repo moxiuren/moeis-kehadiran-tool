@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>极简点名 · MOEIS Kehadiran</title>
+    <style>
+        :root {
+            --primary: #1e88e5;
+            --primary-dark: #1565c0;
+            --primary-light: #e3f2fd;
+            --success: #2e7d32;
+            --success-light: #e8f5e9;
+            --danger: #d32f2f;
+            --danger-light: #ffebee;
+            --warning: #f57c00;
+            --warning-light: #fff3e0;
+            --bg: #f5f7fa;
+            --card-bg: #ffffff;
+            --text: #2c3e50;
+            --text-muted: #7f8c8d;
+            --border: #e2e8f0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.4;
+            padding-bottom: 90px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+            color: #fff;
+            padding: 16px;
+            box-shadow: 0 4px 12px rgba(21, 101, 192, 0.2);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .header-subtitle {
+            font-size: 11px;
+            opacity: 0.85;
+            text-align: center;
+            margin-top: 2px;
+        }
+
+        /* 统一卡片 */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            margin: 12px;
+            padding: 14px;
+            border: 1px solid var(--border);
+        }
+
+        /* 月历模块 */
+        .calendar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .calendar-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
+
+        .btn-nav {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 18px;
+            padding: 4px 12px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+            text-align: center;
+        }
+
+        .weekday {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
+            padding-bottom: 4px;
+        }
+
+        .day-cell {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            position: relative;
+            background-color: #fff;
+            transition: all 0.2s ease;
+        }
+
+        .day-cell:active {
+            transform: scale(0.95);
+        }
+
+        .day-cell.other-month {
+            opacity: 0.25;
+            pointer-events: none;
+        }
+
+        .day-cell.today {
+            border: 2px solid var(--primary);
+        }
+
+        .day-cell.selected {
+            background-color: var(--primary) !important;
+            color: #fff !important;
+            border-color: var(--primary) !important;
+        }
+
+        .day-cell.selected .day-stat {
+            color: rgba(255, 255, 255, 0.9) !important;
+        }
+
+        .day-stat {
+            font-size: 9px;
+            font-weight: normal;
+            margin-top: 2px;
+        }
+
+        /* 状态背景 */
+        .day-cell.all-present {
+            background-color: var(--success-light);
+            color: var(--success);
+            border-color: rgba(46, 125, 50, 0.15);
+        }
+
+        .day-cell.all-present .day-stat {
+            color: var(--success);
+        }
+
+        .day-cell.has-absents {
+            background-color: var(--warning-light);
+            color: var(--warning);
+            border-color: rgba(245, 124, 0, 0.15);
+        }
+
+        .day-cell.has-absents .day-stat {
+            color: var(--warning);
+        }
+
+        /* 学生列表模块 */
+        .list-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 16px 12px 6px;
+        }
+
+        .list-title {
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .btn-action-all {
+            background-color: var(--success);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn-action-all:active {
+            opacity: 0.8;
+        }
+
+        .student-item {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin: 8px 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.2s ease;
+        }
+
+        .student-main {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .student-info {
+            flex: 1;
+        }
+
+        .student-name {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .student-status-badge {
+            display: inline-block;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-top: 4px;
+            font-weight: bold;
+        }
+
+        .student-item.present .student-status-badge {
+            background-color: var(--success-light);
+            color: var(--success);
+        }
+
+        .student-item.absent .student-status-badge {
+            background-color: var(--danger-light);
+            color: var(--danger);
+        }
+
+        /* 勾选开关 */
+        .toggle-switch {
+            width: 50px;
+            height: 28px;
+            border-radius: 14px;
+            background-color: #cbd5e1;
+            position: relative;
+            transition: background-color 0.2s;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: #fff;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+            transition: left 0.2s;
+        }
+
+        .student-item.present .toggle-switch {
+            background-color: var(--success);
+        }
+
+        .student-item.present .toggle-switch::after {
+            left: 24px;
+        }
+
+        /* 原因选择区 */
+        .absent-options {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed var(--border);
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .student-item.absent .absent-options {
+            display: flex;
+        }
+
+        .absent-options select {
+            width: 100%;
+            height: 32px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0 6px;
+            font-size: 12px;
+            background-color: #fff;
+            color: var(--text);
+        }
+
+        /* 底部控制栏 */
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #fff;
+            border-top: 1px solid var(--border);
+            padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+            display: flex;
+            gap: 10px;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
+            z-index: 99;
+        }
+
+        .btn {
+            flex: 1;
+            height: 44px;
+            border-radius: 8px;
+            border: none;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.2s;
+        }
+
+        .btn:active {
+            opacity: 0.85;
+        }
+
+        .btn-secondary {
+            background-color: #f1f5f9;
+            color: #475569;
+            flex: 0.4;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+            color: #fff;
+        }
+
+        /* 遮罩/提示 */
+        .toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 20px;
+            font-size: 13px;
+            z-index: 1000;
+            display: none;
+            max-width: 80%;
+            text-align: center;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+        }
+
+        .loader-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(255,255,255,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .spinner {
+            width: 36px;
+            height: 36px;
+            border: 4px solid var(--border);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="header-title">MOEIS 点名控制台</div>
+        <div class="header-subtitle">快速提交点名与出勤归档</div>
+    </div>
+
+    <!-- 月历卡片 -->
+    <div class="card" style="padding: 10px;">
+        <div class="calendar-header">
+            <button class="btn-nav" id="prevMonth">&lt;</button>
+            <div class="calendar-title" id="calendarTitle">2026年8月</div>
+            <button class="btn-nav" id="nextMonth">&gt;</button>
+        </div>
+        <div class="calendar-grid" id="calendarGrid">
+            <!-- 周头 -->
+            <div class="weekday">日</div>
+            <div class="weekday">一</div>
+            <div class="weekday">二</div>
+            <div class="weekday">三</div>
+            <div class="weekday">四</div>
+            <div class="weekday">五</div>
+            <div class="weekday">六</div>
+            <!-- 日期由 JS 填充 -->
+        </div>
+    </div>
+
+    <!-- 列表标题及快捷操作 -->
+    <div class="list-header">
+        <div class="list-title" id="listTitle">点名名单 (请选择日期)</div>
+        <button class="btn-action-all" id="btnAllPresent">✔ 全员出席</button>
+    </div>
+
+    <!-- 学生列表 -->
+    <div id="studentListContainer">
+        <div style="text-align: center; color: var(--text-muted); padding: 40px 0; font-size: 13px;">
+            请点击上方日历中的日期来加载名单
+        </div>
+    </div>
+
+    <!-- 底部控制 -->
+    <div class="bottom-bar">
+        <button class="btn btn-secondary" id="btnSaveOnly">仅保存</button>
+        <button class="btn btn-primary" id="btnSaveAndConfirm">✓ 保存并确认全部点名</button>
+    </div>
+
+    <!-- 遮罩与加载 -->
+    <div class="loader-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div style="font-size: 13px; color: var(--text); font-weight: 600;" id="loadingText">处理中，请稍候...</div>
+    </div>
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // 动态加载分类和原因（由后端解析官方最新数据提供）
+        let CATEGORIES = [];
+        let CAUSES = {};
+
+        // 状态管理
+        let currentYear = 2026;
+        let currentMonth = 8; // 1-indexed
+        let selectedDateStr = ""; // "DD/MM/YYYY"
+        let calendarData = {}; // "day" -> {present, total}
+        let studentsList = []; // 学生列表数据
+
+        // DOM 元素
+        const $prevMonth = document.getElementById('prevMonth');
+        const $nextMonth = document.getElementById('nextMonth');
+        const $calendarTitle = document.getElementById('calendarTitle');
+        const $calendarGrid = document.getElementById('calendarGrid');
+        const $listTitle = document.getElementById('listTitle');
+        const $studentContainer = document.getElementById('studentListContainer');
+        const $btnAllPresent = document.getElementById('btnAllPresent');
+        const $btnSaveOnly = document.getElementById('btnSaveOnly');
+        const $btnSaveAndConfirm = document.getElementById('btnSaveAndConfirm');
+        const $loadingOverlay = document.getElementById('loadingOverlay');
+        const $loadingText = document.getElementById('loadingText');
+        const $toast = document.getElementById('toast');
+
+        // 初始化
+        window.addEventListener('DOMContentLoaded', async () => {
+            showLoading(true, "正在同步教育部最新原因库...");
+            try {
+                const r = await fetch('/api/causes');
+                const data = await r.json();
+                CATEGORIES = data.categories || [];
+                CAUSES = data.causes || {};
+            } catch (e) {
+                console.error("加载原因库失败:", e);
+                showToast("同步原因库失败，使用本地兜底");
+                CATEGORIES = [['D', 'MASALAH KESIHATAN']];
+                CAUSES = {'D': [['D0260001', 'MAKLUMAN IBU BAPA PENJAGA'], ['D0010075', 'DEMAM']]};
+            }
+
+            const today = new Date();
+            currentYear = today.getFullYear();
+            currentMonth = today.getMonth() + 1;
+            
+            // 默认选中今天
+            const formattedDay = String(today.getDate()).padStart(2, '0');
+            const formattedMonth = String(currentMonth).padStart(2, '0');
+            selectedDateStr = `${formattedDay}/${formattedMonth}/${currentYear}`;
+
+            loadMonthCalendar(currentYear, currentMonth, true); // 载入月历并自动点击今天
+        });
+
+        // 提示框
+        function showToast(text, duration = 2000) {
+            $toast.textContent = text;
+            $toast.style.display = 'block';
+            setTimeout(() => { $toast.style.display = 'none'; }, duration);
+        }
+
+        // 显示/隐藏 Loading
+        function showLoading(show, text = "处理中，请稍候...") {
+            $loadingText.textContent = text;
+            $loadingOverlay.style.display = show ? 'flex' : 'none';
+        }
+
+        // 月历加载
+        async function loadMonthCalendar(year, month, autoClickSelected = false) {
+            showLoading(true, "正在获取月历状态...");
+            $calendarTitle.textContent = `${year}年${month}月`;
+            
+            // 清理旧日期单元格
+            const cells = $calendarGrid.querySelectorAll('.day-cell, .weekday');
+            cells.forEach(c => { if (c.classList.contains('day-cell')) c.remove(); });
+
+            try {
+                const r = await fetch(`/api/calendar?year=${year}&month=${month}`);
+                const data = await r.json();
+                calendarData = data.days || {};
+            } catch (e) {
+                console.error("加载月历出错:", e);
+                showToast("网络错误，未拿齐月度出勤状态");
+                calendarData = {};
+            }
+            
+            renderCalendarGrid(year, month);
+            showLoading(false);
+
+            if (autoClickSelected) {
+                const targetCell = Array.from($calendarGrid.querySelectorAll('.day-cell')).find(c => c.dataset.date === selectedDateStr);
+                if (targetCell) targetCell.click();
+            }
+        }
+
+        // 渲染日历网格
+        function renderCalendarGrid(year, month) {
+            const firstDay = new Date(year, month - 1, 1).getDay(); // 当月1号是周几
+            const totalDays = new Date(year, month, 0).getDate(); // 当月总天数
+            
+            // 填充当月1号前的空白 (以 other-month 填充)
+            for (let i = 0; i < firstDay; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'day-cell other-month';
+                $calendarGrid.appendChild(cell);
+            }
+
+            // 填充当月每一天
+            for (let day = 1; day <= totalDays; day++) {
+                const cell = document.createElement('div');
+                cell.className = 'day-cell';
+                
+                const dayStr = String(day).padStart(2, '0');
+                const monthStr = String(month).padStart(2, '0');
+                const fullDate = `${dayStr}/${monthStr}/${year}`;
+                
+                cell.dataset.date = fullDate;
+                cell.innerHTML = `<div>${day}</div>`;
+
+                // 检查这天是否有考勤记录 (来自 API 的 calendarData)
+                if (calendarData[dayStr]) {
+                    const stat = calendarData[dayStr];
+                    const statDiv = document.createElement('div');
+                    statDiv.className = 'day-stat';
+                    statDiv.textContent = `${stat.present}/${stat.total}`;
+                    cell.appendChild(statDiv);
+                    
+                    // 背景标色
+                    if (stat.present === stat.total) {
+                        cell.classList.add('all-present');
+                    } else {
+                        cell.classList.add('has-absents');
+                    }
+                } else {
+                    const statDiv = document.createElement('div');
+                    statDiv.className = 'day-stat';
+                    statDiv.textContent = '—';
+                    cell.appendChild(statDiv);
+                }
+
+                // 判断是否是今天
+                const today = new Date();
+                if (today.getFullYear() === year && today.getMonth() + 1 === month && today.getDate() === day) {
+                    cell.classList.add('today');
+                }
+
+                // 判断是否是被选中日期
+                if (fullDate === selectedDateStr) {
+                    cell.classList.add('selected');
+                }
+
+                // 点击事件
+                cell.addEventListener('click', () => {
+                    const sel = $calendarGrid.querySelector('.day-cell.selected');
+                    if (sel) sel.classList.remove('selected');
+                    cell.classList.add('selected');
+                    
+                    selectedDateStr = fullDate;
+                    $listTitle.textContent = `点名名单 (${fullDate})`;
+                    loadStudentsForDate(fullDate);
+                });
+
+                $calendarGrid.appendChild(cell);
+            }
+        }
+
+        // 切换月份
+        $prevMonth.addEventListener('click', () => {
+            currentMonth--;
+            if (currentMonth < 1) {
+                currentMonth = 12;
+                currentYear--;
+            }
+            loadMonthCalendar(currentYear, currentMonth);
+        });
+
+        $nextMonth.addEventListener('click', () => {
+            currentMonth++;
+            if (currentMonth > 12) {
+                currentMonth = 1;
+                currentYear++;
+            }
+            loadMonthCalendar(currentYear, currentMonth);
+        });
+
+        // 载入指定日期的学生名单
+        async function loadStudentsForDate(dateStr) {
+            showLoading(true, `加载 ${dateStr} 名单中...`);
+            try {
+                const r = await fetch(`/api/students?date=${dateStr}`);
+                const data = await r.json();
+                studentsList = data.map(s => {
+                    // 转译结构，让其默认为 present=true
+                    return {
+                        idpelajar: s.idpelajar,
+                        namamurid: s.namamurid,
+                        present: s.absent_details === null,
+                        kategori: s.absent_details ? s.absent_details.kategori : 'D',
+                        sebab: s.absent_details ? s.absent_details.sebab : 'D0260001'
+                    };
+                });
+                renderStudentsList();
+            } catch (e) {
+                console.error("加载名单失败:", e);
+                showToast("加载名单失败，请检查网络或后端");
+                $studentContainer.innerHTML = `<div style="text-align: center; color: var(--danger); padding: 40px 0; font-size: 13px;">加载失败，请重试</div>`;
+            }
+            showLoading(false);
+        }
+
+        // 渲染学生列表
+        function renderStudentsList() {
+            $studentContainer.innerHTML = '';
+            if (studentsList.length === 0) {
+                $studentContainer.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 40px 0; font-size: 13px;">没有找到学生数据</div>`;
+                return;
+            }
+
+            studentsList.forEach((s, idx) => {
+                const item = document.createElement('div');
+                item.className = 'student-item ' + (s.present ? 'present' : 'absent');
+                
+                // 主体区域 (姓名 + 出席状态 + 拨钮)
+                const main = document.createElement('div');
+                main.className = 'student-main';
+                main.innerHTML = `
+                    <div class="student-info">
+                        <div class="student-name">${s.namamurid}</div>
+                        <span class="student-status-badge">${s.present ? '🟢 出席' : '🔴 缺席'}</span>
+                    </div>
+                    <div class="toggle-switch"></div>
+                `;
+                
+                // 原因选择区域
+                const opts = document.createElement('div');
+                opts.className = 'absent-options';
+                
+                // 1. Kategori select
+                const katSelect = document.createElement('select');
+                CATEGORIES.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c[0];
+                    opt.textContent = `${c[0]} · ${c[1]}`;
+                    if (s.kategori === c[0]) opt.selected = true;
+                    katSelect.appendChild(opt);
+                });
+                
+                // 2. Sebab select
+                const sebSelect = document.createElement('select');
+                function populateCauses(katVal) {
+                    sebSelect.innerHTML = '';
+                    const list = CAUSES[katVal] || [];
+                    list.forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c[0];
+                        opt.textContent = c[1];
+                        if (s.sebab === c[0]) opt.selected = true;
+                        sebSelect.appendChild(opt);
+                    });
+                }
+                populateCauses(s.kategori);
+
+                opts.appendChild(katSelect);
+                opts.appendChild(sebSelect);
+                item.appendChild(main);
+                item.appendChild(opts);
+
+                // 交互：点击主区域切换出勤
+                main.addEventListener('click', () => {
+                    s.present = !s.present;
+                    item.className = 'student-item ' + (s.present ? 'present' : 'absent');
+                    item.querySelector('.student-status-badge').textContent = s.present ? '🟢 出席' : '🔴 缺席';
+                    updateSummaryCount();
+                });
+
+                // 交互：切换 Kategori 联动 Sebab
+                katSelect.addEventListener('click', (e) => e.stopPropagation()); // 防击穿
+                katSelect.addEventListener('change', (e) => {
+                    s.kategori = e.target.value;
+                    populateCauses(s.kategori);
+                    s.sebab = sebSelect.value;
+                });
+
+                sebSelect.addEventListener('click', (e) => e.stopPropagation()); // 防击穿
+                sebSelect.addEventListener('change', (e) => {
+                    s.sebab = e.target.value;
+                });
+
+                $studentContainer.appendChild(item);
+            });
+
+            updateSummaryCount();
+        }
+
+        // 更新点名标题汇总数
+        function updateSummaryCount() {
+            const total = studentsList.length;
+            const present = studentsList.filter(s => s.present).length;
+            const absent = total - present;
+            $listTitle.textContent = `点名名单: 已到 ${present} / 缺席 ${absent} / 共 ${total}`;
+        }
+
+        // 按钮交互：全员出席
+        $btnAllPresent.addEventListener('click', () => {
+            studentsList.forEach(s => { s.present = true; });
+            const items = $studentContainer.querySelectorAll('.student-item');
+            items.forEach(item => {
+                item.className = 'student-item present';
+                item.querySelector('.student-status-badge').textContent = '🟢 出席';
+            });
+            updateSummaryCount();
+            showToast("已设全班出席");
+        });
+
+        // 保存/提交逻辑
+        async function doSubmit(mode) {
+            if (!selectedDateStr) {
+                showToast("请先选择要点名的日期");
+                return;
+            }
+            if (studentsList.length === 0) {
+                showToast("请先加载学生名单");
+                return;
+            }
+
+            const absentList = studentsList.filter(s => !s.present).map(s => {
+                return {
+                    idpelajar: s.idpelajar,
+                    namamurid: s.namamurid,
+                    kategori: s.kategori,
+                    sebab: s.sebab
+                };
+            });
+
+            const modeTxt = mode === 'simpansah' ? "保存并确认" : "保存";
+            showLoading(true, `正在发送${modeTxt}数据...`);
+
+            try {
+                const r = await fetch('/api/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        date: selectedDateStr,
+                        mode: mode,
+                        absents: absentList
+                    })
+                });
+                const res = await r.json();
+                if (res.status === 'success') {
+                    showToast(`✓ 点名${modeTxt}成功！`);
+                    // 刷新月历和当前日期名单
+                    await loadMonthCalendar(currentYear, currentMonth);
+                } else {
+                    showToast(`❌ 提交失败: ${res.message || '未知错误'}`);
+                }
+            } catch (e) {
+                console.error("提交发生异常:", e);
+                showToast("提交超时，请检查网络后重试");
+            }
+            showLoading(false);
+        }
+
+        $btnSaveOnly.addEventListener('click', () => doSubmit('simpan'));
+        $btnSaveAndConfirm.addEventListener('click', () => doSubmit('simpansah'));
+    </script>
+</body>
+</html>

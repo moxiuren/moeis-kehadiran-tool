@@ -9,6 +9,7 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.CookieManager;
 import android.webkit.WebChromeClient;
@@ -36,6 +37,8 @@ public class MainActivity extends Activity {
     private SharedPreferences prefs;
     private String lastPageUrl = "";
     private int samePageHits = 0;
+    private LinearLayout loadingOverlay;
+
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -65,6 +68,26 @@ public class MainActivity extends Activity {
             public void log(String s) {
                 android.util.Log.i("MOEIS_D", s);
             }
+
+            @android.webkit.JavascriptInterface
+            public void dismissLoader() {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (loadingOverlay != null && loadingOverlay.getVisibility() == android.view.View.VISIBLE) {
+                            loadingOverlay.animate()
+                                    .alpha(0f)
+                                    .setDuration(350)
+                                    .withEndAction(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            loadingOverlay.setVisibility(android.view.View.GONE);
+                                        }
+                                    }).start();
+                        }
+                    }
+                });
+            }
         }, "MoxiBridge");
 
         web.setWebViewClient(new WebViewClient() {
@@ -81,6 +104,19 @@ public class MainActivity extends Activity {
                     return;
                 }
                 route(u);
+            }
+
+            @Override
+            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                super.onReceivedError(view, errorCode, description, failingUrl);
+                android.util.Log.e("MOEIS_D", "WebView Error: code=" + errorCode + " desc=" + description + " url=" + failingUrl);
+            }
+
+            @android.annotation.TargetApi(android.os.Build.VERSION_CODES.M)
+            @Override
+            public void onReceivedError(WebView view, android.webkit.WebResourceRequest request, android.webkit.WebResourceError error) {
+                super.onReceivedError(view, request, error);
+                android.util.Log.e("MOEIS_D", "WebView Error M: code=" + error.getErrorCode() + " desc=" + error.getDescription() + " url=" + request.getUrl().toString());
             }
         });
 
@@ -128,7 +164,51 @@ public class MainActivity extends Activity {
         fab.setOnClickListener(v -> showCredsDialog(true));
         root.addView(fab, fp);
 
+        // 创建高保真 Loading 遮罩覆盖到最顶层，防止页面跳转闪烁
+        loadingOverlay = new LinearLayout(this);
+        loadingOverlay.setOrientation(LinearLayout.VERTICAL);
+        loadingOverlay.setGravity(Gravity.CENTER);
+        loadingOverlay.setBackgroundColor(Color.parseColor("#1565c0"));
+        
+        ProgressBar spinner = new ProgressBar(this, null, android.R.attr.progressBarStyleLarge);
+        spinner.getIndeterminateDrawable().setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN);
+        
+        TextView tv = new TextView(this);
+        tv.setText("正在建立 MOEIS 安全连接...");
+        tv.setTextColor(Color.WHITE);
+        tv.setTextSize(14);
+        tv.setGravity(Gravity.CENTER);
+        
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = 40;
+        loadingOverlay.addView(spinner, lp);
+        loadingOverlay.addView(tv);
+
+        root.addView(loadingOverlay, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
         setContentView(root);
+
+        // 启动 10 秒超时安全锁：防止在网络差、需要手动滑块验证或 idMe 崩溃时永久卡死在加载画面
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (loadingOverlay != null && loadingOverlay.getVisibility() == View.VISIBLE) {
+                    android.util.Log.w("MOEIS_D", "TIMEOUT: Auto dismissing loader cover");
+                    loadingOverlay.animate()
+                            .alpha(0f)
+                            .setDuration(350)
+                            .withEndAction(new Runnable() {
+                                @Override
+                                public void run() {
+                                    loadingOverlay.setVisibility(View.GONE);
+                                }
+                            }).start();
+                }
+            }
+        }, 10000); // 10秒后无条件释放遮罩
+
         web.loadUrl(TAB_URL);
     }
 
@@ -215,6 +295,36 @@ public class MainActivity extends Activity {
             return;
         }
         eval(js);
+        String diag = "(function(){"
+                + "MoxiBridge.log('DIAG: Installing absent student Kemaskini logger');"
+                + "document.addEventListener('click', function(e){"
+                + "var t = e.target;"
+                + "if(t && (t.id === 'moeis-ka-sah' || t.id === 'moeis-ka-all' || t.id === 'moeis-ka-save')){"
+                + "MoxiBridge.log('DIAG: CLICKED ' + t.id);"
+                + "var trs = document.querySelectorAll('#kehadiran tbody tr');"
+                + "trs.forEach(function(tr, idx){"
+                + "var cb = tr.querySelector('.case-hadir');"
+                + "if(cb && !cb.checked){"
+                + "var kat = tr.querySelector('.selectkategori');"
+                + "var seb = tr.querySelector('.selectsebab');"
+                + "MoxiBridge.log('DIAG: absent_student['+idx+'] katVal='+(kat?kat.value:'null')+' sebVal='+(seb?seb.value:'null')+' jqKatVal='+(window.jQuery?window.jQuery(kat).val():'nojq')+' jqSebVal='+(window.jQuery?window.jQuery(seb).val():'nojq'));"
+                + "}"
+                + "});"
+                + "var cc = 0;"
+                + "var iv = setInterval(function(){"
+                + "var sws = document.querySelectorAll('.sweet-alert, .swal2-modal, .swal-modal, div[role=dialog]');"
+                + "MoxiBridge.log('DIAG: tick ' + cc + ' modals=' + sws.length);"
+                + "sws.forEach(function(sw, i){"
+                + "MoxiBridge.log('DIAG: sw['+i+'] vis='+(sw.offsetWidth>0&&sw.offsetHeight>0)+' text=\"'+sw.textContent.substring(0,150).replace(/\\n/g,' ')+'\"');"
+                + "var btns = sw.querySelectorAll('button, a.btn, input[type=button]');"
+                + "btns.forEach(function(b, j){ MoxiBridge.log('DIAG: sw['+i+']_btn['+j+'] cls=\"'+b.className+'\" txt=\"'+b.textContent.trim()+'\"'); });"
+                + "});"
+                + "if(++cc > 30){ clearInterval(iv); }"
+                + "}, 200);"
+                + "}"
+                + "});"
+                + "})();";
+        eval(diag);
     }
 
     private String loadAsset(String name) throws Exception {
@@ -244,6 +354,9 @@ public class MainActivity extends Activity {
     }
 
     private void showCredsDialog(boolean allowReLogin) {
+        if (loadingOverlay != null) {
+            loadingOverlay.setVisibility(View.GONE);
+        }
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(60, 20, 60, 0);
@@ -278,6 +391,10 @@ public class MainActivity extends Activity {
                 CookieManager.getInstance().flush();
                 lastPageUrl = "";
                 samePageHits = 0;
+                if (loadingOverlay != null) {
+                    loadingOverlay.setAlpha(1f);
+                    loadingOverlay.setVisibility(android.view.View.VISIBLE);
+                }
                 web.loadUrl(TAB_URL);
             });
         }

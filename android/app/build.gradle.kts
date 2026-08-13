@@ -7,11 +7,24 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.moxi.moeiskehadiran"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.2.0"
+    }
+
+    flavorDimensions.add("mode")
+    productFlavors {
+        create("script") {
+            dimension = "mode"
+            applicationId = "com.moxi.moeiskehadiran"
+            manifestPlaceholders["appName"] = "MOEIS点名"
+        }
+        create("calendar") {
+            dimension = "mode"
+            applicationId = "com.moxi.moeiscalendar"
+            manifestPlaceholders["appName"] = "MOEIS日历点名"
+        }
     }
 
     buildTypes {
